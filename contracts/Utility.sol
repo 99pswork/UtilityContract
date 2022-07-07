@@ -26,6 +26,10 @@ interface LooksRare {
     function isUserOrderNonceExecutedOrCancelled(address, uint256) external view returns (bool);
 }
 
+interface X2Y2 {
+    function inventoryStatus(bytes32) external view returns (uint8);
+}
+
 interface NFTBalance {
     function balanceOf(address) external view returns (uint256); 
 }
@@ -40,8 +44,9 @@ contract UtilityContract is Ownable {
     // address private _usdc = 0xeb8f08a975Ab53E34D8a0330E0D34de942C95926; // Rinkeby 
     // address private _weth = 0xc778417E063141139Fce010982780140Aa0cD5Ab; // Rinkeby
 
-    address public openseaAddress = 0x00000000006CEE72100D161c57ADA5Bb2be1CA79; // Rinkeby
-    address public looksRareAddress = 0x59728544B08AB483533076417FbBB2fD0B17CE3a; // Rikeby 
+    address public openseaAddress = 0x00000000006c3852cbEf3e08E8dF289169EdE581; // Mainnet
+    address public looksRareAddress = 0x59728544B08AB483533076417FbBB2fD0B17CE3a; // Mainnet 
+    address public x2y2Address = 0x6D7812d41A08BC2a910B562d8B56411964A4eD88; // Mainnet
 
     struct tokenBalances {
         uint256 ETH;
@@ -75,6 +80,10 @@ contract UtilityContract is Ownable {
 
     function updateLooksRareAddress(address _address) external onlyOwner {
         looksRareAddress = _address;
+    }
+
+    function updateX2Y2Address(address _address) external onlyOwner {
+        x2y2Address = _address;
     }
 
     function updateTokenAddress(address _wethAddress, address _usdcAddress, address _usdtAddress) external onlyOwner {
@@ -169,7 +178,7 @@ contract UtilityContract is Ownable {
         return orderStatus;
     }
 
-    function getMultipleOrderStatus(bytes32[] memory _orderHash) external view returns (OrderStatus[] memory){
+    function getMultipleOrderStatus(bytes32[] memory _orderHash) public view returns (OrderStatus[] memory){
         OrderStatus[] memory orderStatus = new OrderStatus[](_orderHash.length);
         for(uint256 i=0; i<_orderHash.length; i++){
             orderStatus[i] = getOrderStatus(_orderHash[i]);
@@ -181,13 +190,35 @@ contract UtilityContract is Ownable {
         return LooksRare(looksRareAddress).isUserOrderNonceExecutedOrCancelled(_address, _orderNonce);
     }
 
-    function getMultipleUserOrderNonce(address[] memory _address, uint256[] memory _orderNonce) external view returns (bool[] memory) {
+    function getMultipleUserOrderNonce(address[] memory _address, uint256[] memory _orderNonce) public view returns (bool[] memory) {
         require(_address.length == _orderNonce.length, "Length of Array's Passed not equal");
         bool[] memory status = new bool[](_address.length);
         for(uint256 i=0; i<_address.length; i++) {
             status[i] = getUserOrderNonceExecutedOrCancelled(_address[i], _orderNonce[i]);
         }
         return status;
+    }
+
+    function getInventoryStatusX2Y2(bytes32 _bytes) public view returns (uint8) {
+        return X2Y2(x2y2Address).inventoryStatus(_bytes);
+    }
+
+    function getMultipleInventoryStatusX2Y2(bytes32[] memory _bytes) public view returns (uint8[] memory) {
+        uint8[] memory _int8 = new uint8[](_bytes.length);
+        for(uint256 i=0; i<_bytes.length; i++) {
+            _int8[i] = getInventoryStatusX2Y2(_bytes[i]);
+        }
+        return _int8;
+    }
+
+    function getAllMarketData(bytes32[] memory _seaportBytes, address[] memory _looksrareAddress, uint256[] memory _looksRareOrderNonce, bytes32[] memory _x2y2Bytes) 
+    external view returns (OrderStatus[] memory, bool[] memory, uint8[] memory) {
+        require(_looksrareAddress.length == _looksRareOrderNonce.length, "Length should be equal");
+        // OrderStatus[] memory seaPortOrder = new OrderStatus[](_seaportBytes.length);
+        OrderStatus[] memory seaportOrder = getMultipleOrderStatus(_seaportBytes);
+        bool[] memory looksrareStatus = getMultipleUserOrderNonce(_looksrareAddress, _looksRareOrderNonce);
+        uint8[] memory _x2y2Int8 = getMultipleInventoryStatusX2Y2(_x2y2Bytes);
+        return (seaportOrder, looksrareStatus, _x2y2Int8);
     }
 
 }
