@@ -46,7 +46,7 @@ contract UtilityContract is Ownable {
 
     address public openseaAddress = 0x00000000006c3852cbEf3e08E8dF289169EdE581; // Mainnet
     address public looksRareAddress = 0x59728544B08AB483533076417FbBB2fD0B17CE3a; // Mainnet 
-    address public x2y2Address = 0x6D7812d41A08BC2a910B562d8B56411964A4eD88; // Mainnet
+    address public x2y2Address = 0x74312363e45DCaBA76c59ec49a7Aa8A65a67EeD3; // Mainnet
 
     struct tokenBalances {
         uint256 ETH;
