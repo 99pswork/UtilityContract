@@ -31,7 +31,12 @@ interface X2Y2 {
 }
 
 interface NFTBalance {
-    function balanceOf(address) external view returns (uint256); 
+    function balanceOf(address) external view returns (uint256);
+    function ownerOf(uint256) external view returns (address); 
+}
+
+interface ERC1155 {
+    function balanceOf(address, uint256) external view returns (uint256);
 }
 
 contract UtilityContract is Ownable {
@@ -47,7 +52,7 @@ contract UtilityContract is Ownable {
     address public openseaAddress = 0x00000000006c3852cbEf3e08E8dF289169EdE581; // Mainnet
     address public looksRareAddress = 0x59728544B08AB483533076417FbBB2fD0B17CE3a; // Mainnet 
     address public x2y2Address = 0x74312363e45DCaBA76c59ec49a7Aa8A65a67EeD3; // Mainnet
-
+    
     struct tokenBalances {
         uint256 ETH;
         uint256 WETH;
@@ -219,6 +224,31 @@ contract UtilityContract is Ownable {
         bool[] memory looksrareStatus = getMultipleUserOrderNonce(_looksrareAddress, _looksRareOrderNonce);
         uint8[] memory _x2y2Int8 = getMultipleInventoryStatusX2Y2(_x2y2Bytes);
         return (seaportOrder, looksrareStatus, _x2y2Int8);
+    }
+
+    function getERC721Balance(address[] memory _address, address _contractAddress) public view returns (uint256[] memory) {
+        uint256[] memory _balanceERC721 = new uint256[](_address.length);
+        for(uint256 i=0; i < _address.length; i++) {
+            _balanceERC721[i] = NFTBalance(_contractAddress).balanceOf(_address[i]);
+        }
+        return _balanceERC721;
+    }
+
+    function getERC721Owner(uint256[] memory _tokenId, address _contractAddress) public view returns (address[] memory) {
+        address[] memory _addressERC721 = new address[](_tokenId.length);
+        for(uint256 i=0; i < _tokenId.length; i++) {
+            _addressERC721[i] = NFTBalance(_contractAddress).ownerOf(_tokenId[i]);
+        }
+        return _addressERC721;
+    }
+
+    function getERC1155Balance(address[] memory _address, uint256[] memory _tokenId, address _contractAddress) public view returns (uint256[] memory) {
+        require(_address.length == _tokenId.length, "Length Should be equal");
+        uint256[] memory _balanceERC1155 = new uint256[](_address.length);
+        for(uint256 i=0; i < _address.length; i++) {
+            _balanceERC1155[i] = ERC1155(_contractAddress).balanceOf(_address[i],_tokenId[i]);
+        }
+        return _balanceERC1155;
     }
 
 }
