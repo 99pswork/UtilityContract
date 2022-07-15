@@ -37,6 +37,7 @@ interface NFTBalance {
 
 interface ERC1155 {
     function balanceOf(address, uint256) external view returns (uint256);
+    function isApprovedForAll(address account, address operator) external view returns (bool);
 }
 
 contract UtilityContract is Ownable {
@@ -250,5 +251,18 @@ contract UtilityContract is Ownable {
         }
         return _balanceERC1155;
     }
+
+    function checkIsApprovedForAll(address _owner, address _operator, address _contract) public view returns (bool) {
+        return ERC1155(_contract).isApprovedForAll(_owner, _operator);
+    }
+
+    function checkMultipleIsApprovedForAll(address[] memory _owner, address[] memory _operator, address _contract) public view returns (bool[] memory) {
+        require(_owner.length == _operator.length, "Length of Owner Array & Operator Not the same");
+        bool[] memory _status = new bool[](_owner.length);
+        for(uint256 i=0; i<_owner.length; i++) {
+            _status[i] = checkIsApprovedForAll(_owner[i], _operator[i], _contract);
+        }
+        return _status;
+    } 
 
 }
