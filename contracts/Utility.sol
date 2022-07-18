@@ -74,6 +74,15 @@ contract UtilityContract is Ownable {
         string _image;
     } 
 
+    struct ListingValidator {
+        address ERC721Owner;
+        uint256 ERC1155Quantity;
+        OrderStatus seaportOrderStatus;
+        bool looksRareOrderStatus;
+        uint8 x2y2OrderStatus;
+        bool IsApprovedForAll;
+    }
+
     BluechipContract[] public bluechipAddress;
 
     mapping (address => BluechipContract) public getBluechipContract;
@@ -263,6 +272,35 @@ contract UtilityContract is Ownable {
             _status[i] = checkIsApprovedForAll(_owner[i], _operator[i], _contract);
         }
         return _status;
+    }
+
+    function compareStrings(string memory a, string memory b) public view pure returns (bool) {
+        return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
+    }
+
+    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, string memory marketPlace, string memory order_hash_or_nonce) public view returns (ListingValidator memory) {
+        ListingValidator memory _listingValidator;
+        
+        if(compareStrings(token_standard, "ERC721")){
+            _listingValidator.ERC721Owner = getERC721Owner(token_id, contract_address);
+        }
+        else if(compareStrings(token_standard, "ERC1155")){
+            _listingValidator.ERC1155Quantity = getERC1155Balance(from_address, token_id, contract_address);
+        }
+
+        if(compareStrings(marketPlace, "Seaport")){
+            _listingValidator.seaportOrderStatus = getOrderStatus(order_hash_or_nonce);
+        }
+        else if(compareStrings(marketPlace, "LooksRare")){
+            _listingValidator.looksRareOrderStatus = getUserOrderNonceExecutedOrCancelled(contract_address, order_hash_or_nonce);
+        }
+        else if(compareStrings(marketPlace, "X2Y2")){
+            _listingValidator.x2y2OrderStatus = getInventoryStatusX2Y2(order_hash_or_nonce);
+        }
+
+        _listingValidator.IsApprovedForAll = checkIsApprovedForAll(from_address, true, contract_address);
+
+        return _listingValidator;
     } 
 
 }
