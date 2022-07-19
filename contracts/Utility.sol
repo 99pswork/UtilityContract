@@ -274,31 +274,31 @@ contract UtilityContract is Ownable {
         return _status;
     }
 
-    function compareStrings(string memory a, string memory b) public view pure returns (bool) {
+    function compareStrings(string memory a, string memory b) public pure returns (bool) {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
 
-    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, string memory marketPlace, string memory order_hash_or_nonce) public view returns (ListingValidator memory) {
+    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, address operator_address, string memory marketPlace, bytes32 order_hash, uint8 nonce) public view returns (ListingValidator memory) {
         ListingValidator memory _listingValidator;
         
         if(compareStrings(token_standard, "ERC721")){
-            _listingValidator.ERC721Owner = getERC721Owner(token_id, contract_address);
+            _listingValidator.ERC721Owner = NFTBalance(contract_address).ownerOf(token_id);
         }
         else if(compareStrings(token_standard, "ERC1155")){
-            _listingValidator.ERC1155Quantity = getERC1155Balance(from_address, token_id, contract_address);
+            _listingValidator.ERC1155Quantity = ERC1155(contract_address).balanceOf(from_address,token_id);
         }
 
         if(compareStrings(marketPlace, "Seaport")){
-            _listingValidator.seaportOrderStatus = getOrderStatus(order_hash_or_nonce);
+            _listingValidator.seaportOrderStatus = getOrderStatus(order_hash);
         }
         else if(compareStrings(marketPlace, "LooksRare")){
-            _listingValidator.looksRareOrderStatus = getUserOrderNonceExecutedOrCancelled(contract_address, order_hash_or_nonce);
+            _listingValidator.looksRareOrderStatus = getUserOrderNonceExecutedOrCancelled(contract_address, nonce);
         }
         else if(compareStrings(marketPlace, "X2Y2")){
-            _listingValidator.x2y2OrderStatus = getInventoryStatusX2Y2(order_hash_or_nonce);
+            _listingValidator.x2y2OrderStatus = getInventoryStatusX2Y2(order_hash);
         }
 
-        _listingValidator.IsApprovedForAll = checkIsApprovedForAll(from_address, true, contract_address);
+        _listingValidator.IsApprovedForAll = checkIsApprovedForAll(from_address, operator_address, contract_address);
 
         return _listingValidator;
     } 
