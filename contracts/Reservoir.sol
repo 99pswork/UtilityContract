@@ -17,7 +17,7 @@ import {IWyvernV23, IWyvernV23ProxyRegistry} from "./interfaces/IWyvernV23.sol";
 import {IX2Y2} from "./interfaces/IX2Y2.sol";
 import {IZeroExV4} from "./interfaces/IZeroExV4.sol";
 
-contract ReservoirV5_0_0 is Ownable, ReentrancyGuard {
+contract AlphaSharkSweep is Ownable, ReentrancyGuard {
     address public immutable weth;
 
     address public immutable looksRare;
@@ -54,9 +54,6 @@ contract ReservoirV5_0_0 is Ownable, ReentrancyGuard {
         address seaportAddress
     ) {
         weth = wethAddress;
-
-        // --- LooksRare setup ---
-
         looksRare = looksRareAddress;
 
         // Cache the transfer manager contracts
@@ -69,8 +66,6 @@ contract ReservoirV5_0_0 is Ownable, ReentrancyGuard {
             transferSelectorNFT
         ).TRANSFER_MANAGER_ERC1155();
 
-        // --- WyvernV23 setup ---
-
         wyvernV23 = wyvernV23Address;
 
         // Create a user proxy
@@ -80,29 +75,18 @@ contract ReservoirV5_0_0 is Ownable, ReentrancyGuard {
             address(this)
         );
 
-        // Approve the token transfer proxy
         IERC20(weth).approve(
             IWyvernV23(wyvernV23).tokenTransferProxy(),
             type(uint256).max
         );
 
-        // --- ZeroExV4 setup ---
-
         zeroExV4 = zeroExV4Address;
-
-        // --- Foundation setup ---
-
         foundation = foundationAddress;
-
-        // --- X2Y2 setup ---
 
         x2y2 = x2y2Address;
         x2y2ERC721Delegate = x2y2ERC721DelegateAddress;
 
-        // --- Seaport setup ---
-
         seaport = seaportAddress;
-
         // Approve the exchange
         IERC20(weth).approve(seaport, type(uint256).max);
     }
