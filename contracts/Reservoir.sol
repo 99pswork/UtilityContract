@@ -120,15 +120,23 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
     // - "batch" -> buy multiple tokens (natively, only 0xv4, Seaport and X2Y2 support this)
     // - "multi" -> buy multiple tokens (via the router)
 
-    function singleERC721ListingFill(
+    function singleERC721ListingFillWithPrecheck(
         bytes calldata data,
         ExchangeKind exchangeKind,
         address collection,
         uint256 tokenId,
         address receiver,
+        address expectedOwner,
         address feeRecipient,
         uint16 feeBps
     ) external payable nonReentrant {
+        if (
+            expectedOwner != address(0) &&
+            IERC721(collection).ownerOf(tokenId) != expectedOwner
+        ) {
+            revert UnexpectedOwnerOrBalance();
+        }
+
         bytes4 selector = bytes4(data[:4]);
 
         address target;
@@ -202,23 +210,15 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
         }
     }
 
-    function singleERC721ListingFillWithPrecheck(
+    function singleERC721ListingFill(
         bytes calldata data,
         ExchangeKind exchangeKind,
         address collection,
         uint256 tokenId,
         address receiver,
-        address expectedOwner,
         address feeRecipient,
         uint16 feeBps
     ) external payable nonReentrant {
-        if (
-            expectedOwner != address(0) &&
-            IERC721(collection).ownerOf(tokenId) != expectedOwner
-        ) {
-            revert UnexpectedOwnerOrBalance();
-        }
-
         bytes4 selector = bytes4(data[:4]);
 
         address target;
@@ -417,16 +417,24 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
         }
     }
 
-    function singleERC1155ListingFill(
+    function singleERC1155ListingFillWithPrecheck(
         bytes calldata data,
         ExchangeKind exchangeKind,
         address collection,
         uint256 tokenId,
         uint256 amount,
         address receiver,
+        address expectedOwner,
         address feeRecipient,
         uint16 feeBps
     ) external payable nonReentrant {
+        if (
+            expectedOwner != address(0) &&
+            IERC1155(collection).balanceOf(expectedOwner, tokenId) < amount
+        ) {
+            revert UnexpectedOwnerOrBalance();
+        }
+
         bytes4 selector = bytes4(data[:4]);
 
         address target;
@@ -491,25 +499,17 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
             }
         }
     }
-
-    function singleERC1155ListingFillWithPrecheck(
+    
+    function singleERC1155ListingFill(
         bytes calldata data,
         ExchangeKind exchangeKind,
         address collection,
         uint256 tokenId,
         uint256 amount,
         address receiver,
-        address expectedOwner,
         address feeRecipient,
         uint16 feeBps
     ) external payable nonReentrant {
-        if (
-            expectedOwner != address(0) &&
-            IERC1155(collection).balanceOf(expectedOwner, tokenId) < amount
-        ) {
-            revert UnexpectedOwnerOrBalance();
-        }
-
         bytes4 selector = bytes4(data[:4]);
 
         address target;
