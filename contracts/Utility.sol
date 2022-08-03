@@ -301,6 +301,14 @@ contract UtilityContract is Ownable {
         _listingValidator.IsApprovedForAll = checkIsApprovedForAll(from_address, operator_address, contract_address);
 
         return _listingValidator;
+    }
+
+    function accessBalanceNFT(address _address, address[] memory _contractAddress) view public returns (uint256[] memory) {
+        uint256[] memory nftBalances = new uint256[](_contractAddress.length);
+        for(uint256 i=0; i<_contractAddress.length; i++){
+            nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
+        }
+        return nftBalances;
     } 
 
 }
