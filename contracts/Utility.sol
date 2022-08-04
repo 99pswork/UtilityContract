@@ -278,7 +278,7 @@ contract UtilityContract is Ownable {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
 
-    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, address operator_address, string memory marketPlace, bytes32 order_hash, uint8 nonce) public view returns (ListingValidator memory) {
+    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, address operator_address, string memory marketPlace, bytes32 order_hash, uint256 nonce) public view returns (ListingValidator memory) {
         ListingValidator memory _listingValidator;
         
         if(compareStrings(token_standard, "ERC721")){
