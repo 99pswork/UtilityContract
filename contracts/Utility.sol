@@ -303,12 +303,21 @@ contract UtilityContract is Ownable {
         return _listingValidator;
     }
 
-    function accessBalanceNFT(address _address, address[] memory _contractAddress) view public returns (uint256[] memory) {
+    function accessBalanceNFT721(address _address, address[] memory _contractAddress) view public returns (uint256[] memory) {
         uint256[] memory nftBalances = new uint256[](_contractAddress.length);
         for(uint256 i=0; i<_contractAddress.length; i++){
             nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
         }
         return nftBalances;
-    } 
+    }
+
+    function accessBalanceNFT1155(address _address, address[] memory _contractAddress, uint256[] memory _tokenIds) view public returns (uint256[] memory) {
+        require(_contractAddress.length == _tokenIds.length, "Length of contract address and token id's need to be same");
+        uint256[] memory nftBalances = new uint256[](_contractAddress.length);
+        for(uint256 i=0; i<_contractAddress.length; i++){
+            nftBalances[i] = ERC1155(_contractAddress[i]).balanceOf(_address,_tokenIds[i]);
+        }
+        return nftBalances;
+    }
 
 }
