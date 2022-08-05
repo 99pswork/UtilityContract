@@ -83,8 +83,6 @@ contract UtilityContract is Ownable {
         bool IsApprovedForAll;
     }
 
-    BluechipContract[] public bluechipAddress;
-
     mapping (address => BluechipContract) public getBluechipContract;
 
     constructor() {}
@@ -125,43 +123,6 @@ contract UtilityContract is Ownable {
         return listOfTokenURI; 
     }
 
-    function addBluechipAddress(address[] memory _address, string[] memory _name, string[] memory _image) external onlyOwner {
-        require(_address.length == _name.length, "Array length not equal");
-        require(_image.length == _name.length, "Array length not equal");
-        for(uint256 i=0; i<_address.length; i++){
-            require(getBluechipContract[_address[i]]._address == address(0), "Address Already Exists");
-            BluechipContract memory _bluechipContract;
-            _bluechipContract._address = _address[i];
-            _bluechipContract._name = _name[i];
-            _bluechipContract._image = _image[i];
-            getBluechipContract[_address[i]] = _bluechipContract;
-            bluechipAddress.push(_bluechipContract);
-        }
-    }
-
-    function removeBluechipAddress(address _address) external onlyOwner {
-        require(getBluechipContract[_address]._address != address(0), "Address Does Not Exists");
-        uint256 index = 0;
-        bool flag = false;
-        for(uint256 i=0; i<bluechipAddress.length; i++)
-        {
-            if(bluechipAddress[i]._address == _address){
-                index = i;
-                flag = true;
-                BluechipContract storage _BluechipContract = getBluechipContract[_address];
-                _BluechipContract._address = address(0);
-                _BluechipContract._image = "";
-                _BluechipContract._name = "";
-                getBluechipContract[_address] = _BluechipContract;
-            }
-        }
-        if(flag)
-        {
-            bluechipAddress[index] = bluechipAddress[bluechipAddress.length -1];
-            bluechipAddress.pop();
-        }
-    }
-
     function getTokenBalances(address _address) public view returns (tokenBalances memory) {
         tokenBalances memory _tokenBalance;
         _tokenBalance.ETH = address(_address).balance;
@@ -171,20 +132,18 @@ contract UtilityContract is Ownable {
         return _tokenBalance;
     }
 
-    function getNFTBalances(address _address, address _contractAddress) public view returns (BluechipContract[] memory, uint256[] memory, uint256) {
-        uint256[] memory nftBalances = new uint256[](bluechipAddress.length);
-        for(uint256 i=0; i<bluechipAddress.length; i++){
-            nftBalances[i] = NFTBalance(bluechipAddress[i]._address).balanceOf(_address);
+    function getNFTBalances(address _address, address[] memory _contractAddress) public view returns (uint256[] memory) {
+        uint256[] memory nftBalances = new uint256[](_contractAddress.length);
+        for(uint256 i=0; i<_contractAddress.length; i++){
+            nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
         }
-        uint256 _contractNFTBalance =  NFTBalance(_contractAddress).balanceOf(_address);
-        return (bluechipAddress, nftBalances, _contractNFTBalance);
+        return nftBalances;
     }
 
-    function getUserData(address _address, address _contractAddress) external view returns (tokenBalances memory, BluechipContract[] memory, uint256[] memory, uint256) {
-        uint256[] memory nftBalances = new uint256[](bluechipAddress.length);
-        uint256 _contractNFTBalance;
-        (,nftBalances,_contractNFTBalance) = getNFTBalances(_address, _contractAddress);
-        return (getTokenBalances(_address),bluechipAddress,nftBalances,_contractNFTBalance);
+    function getUserData(address _address, address[] memory _contractAddress) external view returns (tokenBalances memory, uint256[] memory) {
+        uint256[] memory nftBalances = new uint256[](_contractAddress.length);
+        nftBalances = getNFTBalances(_address, _contractAddress);
+        return (getTokenBalances(_address),nftBalances);
     }
 
     function getOrderStatus(bytes32 _orderHash) public view returns (OrderStatus memory) {
