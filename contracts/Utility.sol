@@ -177,17 +177,27 @@ contract UtilityContract is Ownable {
         return (orderStatus, failedTx);
     }
 
-    function getUserOrderNonceExecutedOrCancelled(address _address, uint256 _orderNonce) public view returns (bool) {
-        return LooksRare(looksRareAddress).isUserOrderNonceExecutedOrCancelled(_address, _orderNonce);
+    function getUserOrderNonceExecutedOrCancelled(address _address, uint256 _orderNonce) public view returns (bool, bool) {
+        bool failedTx;
+        bool result;
+        try LooksRare(looksRareAddress).isUserOrderNonceExecutedOrCancelled(_address, _orderNonce) {
+            result = LooksRare(looksRareAddress).isUserOrderNonceExecutedOrCancelled(_address, _orderNonce);
+            failedTx = false;
+        }
+        catch {
+            failedTx = true;
+        }
+        return (result, failedTx);
     }
 
-    function getMultipleUserOrderNonce(address[] memory _address, uint256[] memory _orderNonce) public view returns (bool[] memory) {
+    function getMultipleUserOrderNonce(address[] memory _address, uint256[] memory _orderNonce) public view returns (bool[] memory, bool[] memory) {
         require(_address.length == _orderNonce.length, "Length of Array's Passed not equal");
         bool[] memory status = new bool[](_address.length);
+        bool[] memory failedTx = new bool[](_address.length);
         for(uint256 i=0; i<_address.length; i++) {
-            status[i] = getUserOrderNonceExecutedOrCancelled(_address[i], _orderNonce[i]);
+            (status[i], failedTx[i]) = getUserOrderNonceExecutedOrCancelled(_address[i], _orderNonce[i]);
         }
-        return status;
+        return (status, failedTx);
     }
 
     function getInventoryStatusX2Y2(bytes32 _bytes) public view returns (uint8) {
