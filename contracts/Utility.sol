@@ -132,32 +132,49 @@ contract UtilityContract is Ownable {
         return _tokenBalance;
     }
 
-    function getNFTBalances(address _address, address[] memory _contractAddress) public view returns (uint256[] memory) {
+    function getNFTBalances(address _address, address[] memory _contractAddress) public view returns (uint256[] memory, bool[] memory) {
         uint256[] memory nftBalances = new uint256[](_contractAddress.length);
+        bool[] memory failedTx = new bool[](_contractAddress.length);
         for(uint256 i=0; i<_contractAddress.length; i++){
-            nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
+            try NFTBalance(_contractAddress[i]).balanceOf(_address) {
+                nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
+                failedTx[i] = false;
+            }
+            catch {
+                nftBalances[i] = 0;
+                failedTx[i] = true;
+            }
         }
-        return nftBalances;
+        return (nftBalances,failedTx);
     }
 
-    function getUserData(address _address, address[] memory _contractAddress) external view returns (tokenBalances memory, uint256[] memory) {
+    function getUserData(address _address, address[] memory _contractAddress) external view returns (tokenBalances memory, uint256[] memory, bool[] memory) {
         uint256[] memory nftBalances = new uint256[](_contractAddress.length);
-        nftBalances = getNFTBalances(_address, _contractAddress);
-        return (getTokenBalances(_address),nftBalances);
+        bool[] memory failedTx = new bool[](_contractAddress.length);
+        (nftBalances, failedTx) = getNFTBalances(_address, _contractAddress);
+        return (getTokenBalances(_address),nftBalances, failedTx);
     }
 
-    function getOrderStatus(bytes32 _orderHash) public view returns (OrderStatus memory) {
+    function getOrderStatus(bytes32 _orderHash) public view returns (OrderStatus memory, bool) {
         OrderStatus memory orderStatus; 
-        (orderStatus.isValidated,orderStatus.isCancelled, orderStatus.totalFilled, orderStatus.totalSize) = OpenSea(openseaAddress).getOrderStatus(_orderHash);
-        return orderStatus;
+        bool failedTx;
+        try OpenSea(openseaAddress).getOrderStatus(_orderHash) {
+            (orderStatus.isValidated,orderStatus.isCancelled, orderStatus.totalFilled, orderStatus.totalSize) = OpenSea(openseaAddress).getOrderStatus(_orderHash);
+            failedTx = false;
+        }
+        catch {
+            failedTx = true;
+        }
+        return (orderStatus,failedTx);
     }
 
-    function getMultipleOrderStatus(bytes32[] memory _orderHash) public view returns (OrderStatus[] memory){
+    function getMultipleOrderStatus(bytes32[] memory _orderHash) public view returns (OrderStatus[] memory, bool[] memory){
         OrderStatus[] memory orderStatus = new OrderStatus[](_orderHash.length);
+        bool[] memory failedTx = new bool[](_orderHash.length);
         for(uint256 i=0; i<_orderHash.length; i++){
-            orderStatus[i] = getOrderStatus(_orderHash[i]);
+            (orderStatus[i], failedTx[i]) = getOrderStatus(_orderHash[i]);
         } 
-        return orderStatus;
+        return (orderStatus, failedTx);
     }
 
     function getUserOrderNonceExecutedOrCancelled(address _address, uint256 _orderNonce) public view returns (bool) {
