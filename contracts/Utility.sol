@@ -223,13 +223,13 @@ contract UtilityContract is Ownable {
     }
 
     function getAllMarketData(bytes32[] memory _seaportBytes, address[] memory _looksrareAddress, uint256[] memory _looksRareOrderNonce, bytes32[] memory _x2y2Bytes) 
-    external view returns (OrderStatus[] memory, bool[] memory, uint8[] memory) {
+    external view returns (OrderStatus[] memory, bool[] memory, uint8[] memory, bool[] memory, bool[] memory, bool[] memory) {
         require(_looksrareAddress.length == _looksRareOrderNonce.length, "Length should be equal");
         // OrderStatus[] memory seaPortOrder = new OrderStatus[](_seaportBytes.length);
-        OrderStatus[] memory seaportOrder = getMultipleOrderStatus(_seaportBytes);
-        bool[] memory looksrareStatus = getMultipleUserOrderNonce(_looksrareAddress, _looksRareOrderNonce);
-        uint8[] memory _x2y2Int8 = getMultipleInventoryStatusX2Y2(_x2y2Bytes);
-        return (seaportOrder, looksrareStatus, _x2y2Int8);
+        (OrderStatus[] memory seaportOrder,bool[] memory failedTx1) = getMultipleOrderStatus(_seaportBytes);
+        (bool[] memory looksrareStatus, bool[] memory failedTx2) = getMultipleUserOrderNonce(_looksrareAddress, _looksRareOrderNonce);
+        (uint8[] memory _x2y2Int8, bool[] memory failedTx3) = getMultipleInventoryStatusX2Y2(_x2y2Bytes);
+        return (seaportOrder, looksrareStatus, _x2y2Int8, failedTx1, failedTx2, failedTx3);
     }
 
     function getERC721Balance(address[] memory _address, address _contractAddress) public view returns (uint256[] memory) {
@@ -240,21 +240,35 @@ contract UtilityContract is Ownable {
         return _balanceERC721;
     }
 
-    function getERC721Owner(uint256[] memory _tokenId, address _contractAddress) public view returns (address[] memory) {
+    function getERC721Owner(uint256[] memory _tokenId, address _contractAddress) public view returns (address[] memory, bool[] memory) {
         address[] memory _addressERC721 = new address[](_tokenId.length);
+        bool[] memory failedTx = new bool[](_tokenId.length);
         for(uint256 i=0; i < _tokenId.length; i++) {
-            _addressERC721[i] = NFTBalance(_contractAddress).ownerOf(_tokenId[i]);
+            try NFTBalance(_contractAddress).ownerOf(_tokenId[i]) {
+                _addressERC721[i] = NFTBalance(_contractAddress).ownerOf(_tokenId[i]);
+                failedTx[i] = false;
+            }
+            catch {
+                failedTx[i] = true;
+            }
         }
-        return _addressERC721;
+        return (_addressERC721, failedTx);
     }
 
-    function getERC1155Balance(address[] memory _address, uint256[] memory _tokenId, address _contractAddress) public view returns (uint256[] memory) {
+    function getERC1155Balance(address[] memory _address, uint256[] memory _tokenId, address _contractAddress) public view returns (uint256[] memory, bool[] memory) {
         require(_address.length == _tokenId.length, "Length Should be equal");
         uint256[] memory _balanceERC1155 = new uint256[](_address.length);
+        bool[] memory failedTx = new bool[](_address.length);
         for(uint256 i=0; i < _address.length; i++) {
-            _balanceERC1155[i] = ERC1155(_contractAddress).balanceOf(_address[i],_tokenId[i]);
+            try ERC1155(_contractAddress).balanceOf(_address[i],_tokenId[i]) {
+                _balanceERC1155[i] = ERC1155(_contractAddress).balanceOf(_address[i],_tokenId[i]);
+                failedTx[i] = false;
+            }
+            catch {
+                failedTx[i] = true;
+            }
         }
-        return _balanceERC1155;
+        return (_balanceERC1155, failedTx);
     }
 
     function checkIsApprovedForAll(address _owner, address _operator, address _contract) public view returns (bool) {
