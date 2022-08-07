@@ -271,25 +271,33 @@ contract UtilityContract is Ownable {
         return (_balanceERC1155, failedTx);
     }
 
-    function checkIsApprovedForAll(address _owner, address _operator, address _contract) public view returns (bool) {
-        return ERC1155(_contract).isApprovedForAll(_owner, _operator);
+    function checkIsApprovedForAll(address _owner, address _operator, address _contract) public view returns (bool, bool) {
+        try ERC1155(_contract).isApprovedForAll(_owner, _operator) {
+            return (ERC1155(_contract).isApprovedForAll(_owner, _operator), false);
+        }
+        catch {
+            return (ERC1155(_contract).isApprovedForAll(_owner, _operator), true);
+        }
     }
 
-    function checkMultipleIsApprovedForAll(address[] memory _owner, address[] memory _operator, address _contract) public view returns (bool[] memory) {
+    function checkMultipleIsApprovedForAll(address[] memory _owner, address[] memory _operator, address _contract) public view returns (bool[] memory, bool[] memory) {
         require(_owner.length == _operator.length, "Length of Owner Array & Operator Not the same");
         bool[] memory _status = new bool[](_owner.length);
+        bool[] memory failedTx = new bool[](_owner.length);
         for(uint256 i=0; i<_owner.length; i++) {
-            _status[i] = checkIsApprovedForAll(_owner[i], _operator[i], _contract);
+            (_status[i], failedTx[i]) = checkIsApprovedForAll(_owner[i], _operator[i], _contract);
         }
-        return _status;
+        return (_status, failedTx);
     }
 
     function compareStrings(string memory a, string memory b) public pure returns (bool) {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
 
-    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, address operator_address, string memory marketPlace, bytes32 order_hash, uint256 nonce) public view returns (ListingValidator memory) {
+    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, address operator_address, string memory marketPlace, bytes32 order_hash, uint256 nonce) public view returns (ListingValidator memory, bool) {
         ListingValidator memory _listingValidator;
+        bool failedTx = false;
+        bool failedTx2 = false;
         
         if(compareStrings(token_standard, "ERC721")){
             _listingValidator.ERC721Owner = NFTBalance(contract_address).ownerOf(token_id);
@@ -299,35 +307,51 @@ contract UtilityContract is Ownable {
         }
 
         if(compareStrings(marketPlace, "Seaport")){
-            _listingValidator.seaportOrderStatus = getOrderStatus(order_hash);
+            (_listingValidator.seaportOrderStatus, failedTx) = getOrderStatus(order_hash);
         }
         else if(compareStrings(marketPlace, "LooksRare")){
-            _listingValidator.looksRareOrderStatus = getUserOrderNonceExecutedOrCancelled(contract_address, nonce);
+            (_listingValidator.looksRareOrderStatus, failedTx) = getUserOrderNonceExecutedOrCancelled(contract_address, nonce);
         }
         else if(compareStrings(marketPlace, "X2Y2")){
-            _listingValidator.x2y2OrderStatus = getInventoryStatusX2Y2(order_hash);
+            (_listingValidator.x2y2OrderStatus, failedTx) = getInventoryStatusX2Y2(order_hash);
         }
 
-        _listingValidator.IsApprovedForAll = checkIsApprovedForAll(from_address, operator_address, contract_address);
+        (_listingValidator.IsApprovedForAll, failedTx2) = checkIsApprovedForAll(from_address, operator_address, contract_address);
 
-        return _listingValidator;
+        return (_listingValidator, failedTx || failedTx2);
     }
 
-    function accessBalanceNFT721(address _address, address[] memory _contractAddress) view public returns (uint256[] memory) {
+    function accessBalanceNFT721(address _address, address[] memory _contractAddress) view public returns (uint256[] memory, bool[] memory) {
         uint256[] memory nftBalances = new uint256[](_contractAddress.length);
+        bool[] memory failedTx = new bool[](_contractAddress.length);
+
         for(uint256 i=0; i<_contractAddress.length; i++){
-            nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
+            try NFTBalance(_contractAddress[i]).balanceOf(_address){
+                nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
+                failedTx[i] = false;
+            }
+            catch {
+                failedTx[i] = true;
+            }
         }
-        return nftBalances;
+        return (nftBalances, failedTx);
     }
 
-    function accessBalanceNFT1155(address _address, address[] memory _contractAddress, uint256[] memory _tokenIds) view public returns (uint256[] memory) {
+    function accessBalanceNFT1155(address _address, address[] memory _contractAddress, uint256[] memory _tokenIds) view public returns (uint256[] memory, bool[] memory) {
         require(_contractAddress.length == _tokenIds.length, "Length of contract address and token id's need to be same");
         uint256[] memory nftBalances = new uint256[](_contractAddress.length);
+        bool[] memory failedTx = new bool[](_contractAddress.length);
+
         for(uint256 i=0; i<_contractAddress.length; i++){
-            nftBalances[i] = ERC1155(_contractAddress[i]).balanceOf(_address,_tokenIds[i]);
+            try ERC1155(_contractAddress[i]).balanceOf(_address,_tokenIds[i]) {
+                nftBalances[i] = ERC1155(_contractAddress[i]).balanceOf(_address,_tokenIds[i]);
+                failedTx[i] = false;
+            }
+            catch {
+                failedTx[i] = true;
+            }
         }
-        return nftBalances;
+        return (nftBalances, failedTx);
     }
 
 }
