@@ -200,16 +200,26 @@ contract UtilityContract is Ownable {
         return (status, failedTx);
     }
 
-    function getInventoryStatusX2Y2(bytes32 _bytes) public view returns (uint8) {
-        return X2Y2(x2y2Address).inventoryStatus(_bytes);
+    function getInventoryStatusX2Y2(bytes32 _bytes) public view returns (uint8, bool) {
+        uint8 result;
+        bool failedTx;
+        try X2Y2(x2y2Address).inventoryStatus(_bytes) {
+            result = X2Y2(x2y2Address).inventoryStatus(_bytes);
+            failedTx = false;
+        }
+        catch {
+            failedTx = true;
+        }
+        return (result, failedTx);
     }
 
-    function getMultipleInventoryStatusX2Y2(bytes32[] memory _bytes) public view returns (uint8[] memory) {
+    function getMultipleInventoryStatusX2Y2(bytes32[] memory _bytes) public view returns (uint8[] memory, bool[] memory) {
         uint8[] memory _int8 = new uint8[](_bytes.length);
+        bool[] memory failedTx = new bool[](_bytes.length);
         for(uint256 i=0; i<_bytes.length; i++) {
-            _int8[i] = getInventoryStatusX2Y2(_bytes[i]);
+            (_int8[i], failedTx[i]) = getInventoryStatusX2Y2(_bytes[i]);
         }
-        return _int8;
+        return (_int8, failedTx);
     }
 
     function getAllMarketData(bytes32[] memory _seaportBytes, address[] memory _looksrareAddress, uint256[] memory _looksRareOrderNonce, bytes32[] memory _x2y2Bytes) 
