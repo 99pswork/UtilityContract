@@ -246,31 +246,45 @@ contract UtilityContract is Ownable {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
 
-    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, address operator_address, string memory marketPlace, bytes32 order_hash, uint256 nonce) public view returns (ListingValidator memory, bool) {
+    function validateContractListing(address contract_address, uint256 token_id, string memory token_standard, address from_address, address operator_address, string memory marketPlace, bytes32 order_hash, uint256 nonce) public view returns (ListingValidator memory, bool, bool, bool) {
         ListingValidator memory _listingValidator;
         bool failedTx = false;
         bool failedTx2 = false;
+        bool failedTx3 = false;
         
         if(compareStrings(token_standard, "ERC721")){
-            _listingValidator.ERC721Owner = NFTBalance(contract_address).ownerOf(token_id);
+            try NFTBalance(contract_address).ownerOf(token_id) {
+                _listingValidator.ERC721Owner = NFTBalance(contract_address).ownerOf(token_id);
+                failedTx = false;
+            }
+            catch {
+                failedTx = true;
+            }
         }
         else if(compareStrings(token_standard, "ERC1155")){
-            _listingValidator.ERC1155Quantity = ERC1155(contract_address).balanceOf(from_address,token_id);
+            try ERC1155(contract_address).balanceOf(from_address,token_id) {
+                _listingValidator.ERC1155Quantity = ERC1155(contract_address).balanceOf(from_address,token_id);
+                failedTx = false;
+            }
+            catch {
+                failedTx = true;
+            }
+            
         }
 
         if(compareStrings(marketPlace, "Seaport")){
-            (_listingValidator.seaportOrderStatus, failedTx) = getOrderStatus(order_hash);
+            (_listingValidator.seaportOrderStatus, failedTx2) = getOrderStatus(order_hash);
         }
         else if(compareStrings(marketPlace, "LooksRare")){
-            (_listingValidator.looksRareOrderStatus, failedTx) = getUserOrderNonceExecutedOrCancelled(contract_address, nonce);
+            (_listingValidator.looksRareOrderStatus, failedTx2) = getUserOrderNonceExecutedOrCancelled(contract_address, nonce);
         }
         else if(compareStrings(marketPlace, "X2Y2")){
-            (_listingValidator.x2y2OrderStatus, failedTx) = getInventoryStatusX2Y2(order_hash);
+            (_listingValidator.x2y2OrderStatus, failedTx2) = getInventoryStatusX2Y2(order_hash);
         }
 
-        (_listingValidator.IsApprovedForAll, failedTx2) = checkIsApprovedForAll(from_address, operator_address, contract_address);
+        (_listingValidator.IsApprovedForAll, failedTx3) = checkIsApprovedForAll(from_address, operator_address, contract_address);
 
-        return (_listingValidator, failedTx || failedTx2);
+        return (_listingValidator, failedTx, failedTx2, failedTx3);
     }
 
     function accessBalanceNFT721(address _address, address[] memory _contractAddress) view public returns (uint256[] memory, bool[] memory) {
