@@ -68,12 +68,6 @@ contract UtilityContract is Ownable {
         uint256 totalSize;
     }
 
-    struct BluechipContract {
-        address _address;
-        string _name;
-        string _image;
-    } 
-
     struct ListingValidator {
         address ERC721Owner;
         uint256 ERC1155Quantity;
@@ -82,8 +76,6 @@ contract UtilityContract is Ownable {
         uint8 x2y2OrderStatus;
         bool IsApprovedForAll;
     }
-
-    mapping (address => BluechipContract) public getBluechipContract;
 
     constructor() {}
 
@@ -132,26 +124,10 @@ contract UtilityContract is Ownable {
         return _tokenBalance;
     }
 
-    function getNFTBalances(address _address, address[] memory _contractAddress) public view returns (uint256[] memory, bool[] memory) {
-        uint256[] memory nftBalances = new uint256[](_contractAddress.length);
-        bool[] memory failedTx = new bool[](_contractAddress.length);
-        for(uint256 i=0; i<_contractAddress.length; i++){
-            try NFTBalance(_contractAddress[i]).balanceOf(_address) {
-                nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
-                failedTx[i] = false;
-            }
-            catch {
-                nftBalances[i] = 0;
-                failedTx[i] = true;
-            }
-        }
-        return (nftBalances,failedTx);
-    }
-
     function getUserData(address _address, address[] memory _contractAddress) external view returns (tokenBalances memory, uint256[] memory, bool[] memory) {
         uint256[] memory nftBalances = new uint256[](_contractAddress.length);
         bool[] memory failedTx = new bool[](_contractAddress.length);
-        (nftBalances, failedTx) = getNFTBalances(_address, _contractAddress);
+        (nftBalances, failedTx) = accessBalanceNFT721(_address, _contractAddress);
         return (getTokenBalances(_address),nftBalances, failedTx);
     }
 
@@ -232,14 +208,6 @@ contract UtilityContract is Ownable {
         return (seaportOrder, looksrareStatus, _x2y2Int8, failedTx1, failedTx2, failedTx3);
     }
 
-    function getERC721Balance(address[] memory _address, address _contractAddress) public view returns (uint256[] memory) {
-        uint256[] memory _balanceERC721 = new uint256[](_address.length);
-        for(uint256 i=0; i < _address.length; i++) {
-            _balanceERC721[i] = NFTBalance(_contractAddress).balanceOf(_address[i]);
-        }
-        return _balanceERC721;
-    }
-
     function getERC721Owner(uint256[] memory _tokenId, address _contractAddress) public view returns (address[] memory, bool[] memory) {
         address[] memory _addressERC721 = new address[](_tokenId.length);
         bool[] memory failedTx = new bool[](_tokenId.length);
@@ -255,28 +223,12 @@ contract UtilityContract is Ownable {
         return (_addressERC721, failedTx);
     }
 
-    function getERC1155Balance(address[] memory _address, uint256[] memory _tokenId, address _contractAddress) public view returns (uint256[] memory, bool[] memory) {
-        require(_address.length == _tokenId.length, "Length Should be equal");
-        uint256[] memory _balanceERC1155 = new uint256[](_address.length);
-        bool[] memory failedTx = new bool[](_address.length);
-        for(uint256 i=0; i < _address.length; i++) {
-            try ERC1155(_contractAddress).balanceOf(_address[i],_tokenId[i]) {
-                _balanceERC1155[i] = ERC1155(_contractAddress).balanceOf(_address[i],_tokenId[i]);
-                failedTx[i] = false;
-            }
-            catch {
-                failedTx[i] = true;
-            }
-        }
-        return (_balanceERC1155, failedTx);
-    }
-
     function checkIsApprovedForAll(address _owner, address _operator, address _contract) public view returns (bool, bool) {
         try ERC1155(_contract).isApprovedForAll(_owner, _operator) {
             return (ERC1155(_contract).isApprovedForAll(_owner, _operator), false);
         }
         catch {
-            return (ERC1155(_contract).isApprovedForAll(_owner, _operator), true);
+            return (false, true);
         }
     }
 
@@ -326,11 +278,12 @@ contract UtilityContract is Ownable {
         bool[] memory failedTx = new bool[](_contractAddress.length);
 
         for(uint256 i=0; i<_contractAddress.length; i++){
-            try NFTBalance(_contractAddress[i]).balanceOf(_address){
+            try NFTBalance(_contractAddress[i]).balanceOf(_address) {
                 nftBalances[i] = NFTBalance(_contractAddress[i]).balanceOf(_address);
                 failedTx[i] = false;
             }
             catch {
+                nftBalances[i] = 0;
                 failedTx[i] = true;
             }
         }
@@ -341,7 +294,6 @@ contract UtilityContract is Ownable {
         require(_contractAddress.length == _tokenIds.length, "Length of contract address and token id's need to be same");
         uint256[] memory nftBalances = new uint256[](_contractAddress.length);
         bool[] memory failedTx = new bool[](_contractAddress.length);
-
         for(uint256 i=0; i<_contractAddress.length; i++){
             try ERC1155(_contractAddress[i]).balanceOf(_address,_tokenIds[i]) {
                 nftBalances[i] = ERC1155(_contractAddress[i]).balanceOf(_address,_tokenIds[i]);
