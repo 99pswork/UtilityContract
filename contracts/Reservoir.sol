@@ -11,6 +11,7 @@ import {ExchangeKind} from "./interfaces/IExchangeKind.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 
 import {IFoundation} from "./interfaces/IFoundation.sol";
+import {ISudoSwap} from "./interfaces/ISudoSwap.sol";
 import {ILooksRare, ILooksRareTransferSelectorNFT} from "./interfaces/ILooksRare.sol";
 import {ISeaport} from "./interfaces/ISeaport.sol";
 import {IWyvernV23, IWyvernV23ProxyRegistry} from "./interfaces/IWyvernV23.sol";
@@ -28,6 +29,7 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
     address public immutable wyvernV23Proxy;
 
     address public immutable zeroExV4;
+    address public immutable sudoSwap;
 
     address public immutable foundation;
 
@@ -51,7 +53,8 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
         address foundationAddress,
         address x2y2Address,
         address x2y2ERC721DelegateAddress,
-        address seaportAddress
+        address seaportAddress,
+        address sudoSwapAddress
     ) {
         weth = wethAddress;
         looksRare = looksRareAddress;
@@ -87,6 +90,7 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
         x2y2ERC721Delegate = x2y2ERC721DelegateAddress;
 
         seaport = seaportAddress;
+        sudoSwap = sudoSwapAddress;
         // Approve the exchange
         IERC20(weth).approve(seaport, type(uint256).max);
     }
@@ -176,20 +180,29 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
             if (selector != IFoundation.buyV2.selector) {
                 revert UnexpectedSelector();
             }
+        } else if (exchangeKind == ExchangeKind.SUDO_SWAP) {
+            target = sudoSwap;
         } else {
             revert UnsupportedExchange();
         }
 
         uint256 payment = (10000 * msg.value) / (10000 + feeBps);
-
-        (bool success, ) = target.call{value: payment}(data);
+        bool success = false;
+        if(exchangeKind == ExchangeKind.SUDO_SWAP)
+        {
+            (success, ) = target.delegatecall(data);
+        }
+        else{
+            (success, ) = target.call{value: payment}(data);
+        }
         if (!success) {
             revert UnsuccessfulFill();
         }
 
         if (
             exchangeKind != ExchangeKind.SEAPORT &&
-            exchangeKind != ExchangeKind.WYVERN_V23
+            exchangeKind != ExchangeKind.WYVERN_V23 &&
+            exchangeKind != ExchangeKind.SUDO_SWAP
         ) {
             // When filling anything other than Wyvern or Seaport we need to send
             // the NFT to the taker's wallet after the fill (since we cannot have
@@ -258,20 +271,29 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
             if (selector != IFoundation.buyV2.selector) {
                 revert UnexpectedSelector();
             }
+        } else if (exchangeKind == ExchangeKind.SUDO_SWAP) {
+            target = sudoSwap;
         } else {
             revert UnsupportedExchange();
         }
 
         uint256 payment = (10000 * msg.value) / (10000 + feeBps);
-
-        (bool success, ) = target.call{value: payment}(data);
+        bool success = false;
+        if(exchangeKind == ExchangeKind.SUDO_SWAP)
+        {
+            (success, ) = target.delegatecall(data);
+        }
+        else{
+            (success, ) = target.call{value: payment}(data);
+        }
         if (!success) {
             revert UnsuccessfulFill();
         }
 
         if (
             exchangeKind != ExchangeKind.SEAPORT &&
-            exchangeKind != ExchangeKind.WYVERN_V23
+            exchangeKind != ExchangeKind.WYVERN_V23 &&
+            exchangeKind != ExchangeKind.SUDO_SWAP
         ) {
             // When filling anything other than Wyvern or Seaport we need to send
             // the NFT to the taker's wallet after the fill (since we cannot have
@@ -706,8 +728,14 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
         bool revertIfIncomplete
     ) external payable {
         bool success;
-
         uint256 balanceBefore = address(this).balance - msg.value;
+        
+        uint256 totalAmount = 0;
+        uint256 fees = 0;
+        for (uint256 i = 0; i < length; ) {
+            totalAmount += values[i];
+        }
+        require(msg.value > totalAmount.mul(101).div(100), "Insufficient Funds");
 
         uint256 length = data.length;
         for (uint256 i = 0; i < length; ) {
@@ -715,12 +743,14 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
             if (revertIfIncomplete && !success) {
                 revert UnsuccessfulFill();
             }
-
+            if(success){
+                fees += values[i].div(100);
+            }
             unchecked {
                 ++i;
             }
         }
-
+        balanceBefore += fees;
         uint256 balanceAfter = address(this).balance;
 
         if (balanceAfter > balanceBefore) {
@@ -732,6 +762,11 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
             }
         }
     }
+
+    function withdrawFees() external onlyOwner {
+        require( address(this).balance!=0, "Alpha-Swap: Balance is Zero!");
+        payable(msg.sender).transfer(address(this).balance);
+    } 
 
     // ERC721 / ERC1155 overrides
 

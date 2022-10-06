@@ -10,8 +10,18 @@ contract TestProxyContract is Ownable {
 
     constructor() {}
 
-    function testFunction(address _address, bytes memory _tradeData) payable external returns (bool) {
-        (bool result,) = _address.call{value:msg.value}(_tradeData);
-        return result;
+    struct PairSwapSpecific {
+        address pair;
+        uint256[] nftIds;
+    }
+
+    function testFunction(
+        PairSwapSpecific[] calldata swapList,
+        address payable ethRecipient,
+        address nftRecipient,
+        uint256 deadline
+    ) payable external returns (uint256) {
+        uint256 remValue = _address.call{value: msg.value}(abi.encodedWithSignature("swapETHForSpecificNFTs(PairSwapSpecific[], address, address, uint256))", swapList, ethRecipient, nftRecipient, deadline));
+        return remValue;
     }
 }
