@@ -732,10 +732,10 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
         
         uint256 totalAmount = 0;
         uint256 fees = 0;
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < values.length; i++) {
             totalAmount += values[i];
         }
-        require(msg.value > totalAmount.mul(101).div(100), "Insufficient Funds");
+        require(msg.value >= (totalAmount*101)/100, "Insufficient Funds");
 
         uint256 length = data.length;
         for (uint256 i = 0; i < length; ) {
@@ -744,7 +744,7 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
                 revert UnsuccessfulFill();
             }
             if(success){
-                fees += values[i].div(100);
+                fees += values[i]/100;
             }
             unchecked {
                 ++i;
