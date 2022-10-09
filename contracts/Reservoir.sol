@@ -728,6 +728,39 @@ contract AlphaSharkSweep is Ownable, ReentrancyGuard {
         bool revertIfIncomplete
     ) external payable {
         bool success;
+
+        uint256 balanceBefore = address(this).balance - msg.value;
+
+        uint256 length = data.length;
+        for (uint256 i = 0; i < length; ) {
+            (success, ) = address(this).call{value: values[i]}(data[i]);
+            if (revertIfIncomplete && !success) {
+                revert UnsuccessfulFill();
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        uint256 balanceAfter = address(this).balance;
+
+        if (balanceAfter > balanceBefore) {
+            (success, ) = msg.sender.call{value: balanceAfter - balanceBefore}(
+                ""
+            );
+            if (!success) {
+                revert UnsuccessfulPayment();
+            }
+        }
+    }
+
+    function multiListingFillWithFees(
+        bytes[] calldata data,
+        uint256[] calldata values,
+        bool revertIfIncomplete
+    ) external payable {
+        bool success;
         uint256 balanceBefore = address(this).balance - msg.value;
         
         uint256 totalAmount = 0;
